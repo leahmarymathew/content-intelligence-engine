@@ -36,7 +36,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="AI-powered content generation and intelligence platform",
+    description="Quill — AI-powered content generation, RAG retrieval, and performance intelligence.",
     version="1.0.0",
     lifespan=lifespan,
 )

@@ -86,9 +86,9 @@ function ContentGenerator() {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">AI Content Generator</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Content Generator</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Generate high-quality, audience-targeted content in seconds using AI.
+          Generate audience-targeted content in seconds — blog posts, emails, case studies, and more.
         </p>
       </div>
 

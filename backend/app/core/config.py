@@ -9,7 +9,7 @@ class Settings:
     """Centralized runtime settings loaded from environment variables."""
 
     # Application
-    APP_NAME: str = "AI Content Intelligence Engine"
+    APP_NAME: str = "Quill"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     
     # Database — fix Render/Heroku postgres:// → postgresql://
