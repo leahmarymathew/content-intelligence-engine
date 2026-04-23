@@ -3,8 +3,8 @@ from app.models.content_model import Content
 from app.schemas.content_schema import ContentResponse
 
 
-def save_content(db: Session, data, category):
-    """Save generated content to database with categorization"""
+def save_content(db: Session, data: dict, category: str) -> ContentResponse:
+    """Persist generated content and return a normalized API response."""
     
     item = Content(
         title=data.get("title"),
