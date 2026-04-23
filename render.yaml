@@ -1,12 +1,13 @@
 services:
   - type: web
-    name: ai-content-engine-api
+    name: ai-content-intelligence-backend
     env: python
     region: oregon
     plan: free
     branch: main
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    rootDir: backend
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -15,7 +16,21 @@ services:
         generateValue: true
       - key: OPENAI_API_KEY
         sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX_NAME
+        value: content-intelligence
+      - key: CHROMA_COLLECTION_NAME
+        value: content-intelligence
+      - key: RAG_DEFAULT_TOP_K
+        value: "5"
+      - key: RAG_MAX_RETRIES
+        value: "2"
       - key: CORS_ORIGINS
         value: https://your-frontend-url.vercel.app
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ENVIRONMENT
+        value: production
       - key: PYTHON_VERSION
         value: 3.12.0

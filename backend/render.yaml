@@ -1,10 +1,34 @@
-# Build configuration for Render.com
-
-# Python version
-python-3.12.0
-
-# Install dependencies
-pip install -r requirements.txt
-
-# The app will be started with:
-# uvicorn app.main:app --host 0.0.0.0 --port $PORT
+﻿services:
+  - type: web
+    name: ai-content-intelligence-backend
+    env: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX_NAME
+        value: content-intelligence
+      - key: CHROMA_COLLECTION_NAME
+        value: content-intelligence
+      - key: RAG_DEFAULT_TOP_K
+        value: "5"
+      - key: RAG_MAX_RETRIES
+        value: "2"
+      - key: CORS_ORIGINS
+        value: https://your-frontend-url.vercel.app
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.12.0
