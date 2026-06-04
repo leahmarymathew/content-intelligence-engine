@@ -9,6 +9,8 @@ requests==2.32.5
 httpx==0.28.1
 pydantic==2.11.7
 openai==1.104.2
+motor==3.6.0
+numpy>=1.24.0
 langchain==0.3.27
 langchain-core==0.3.76
 langchain-openai==0.3.33

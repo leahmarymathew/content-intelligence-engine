@@ -12,8 +12,10 @@ class Settings:
     APP_NAME: str = "AI Content Intelligence Engine"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     
-    # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./content.db")
+    # Database — fix Render/Heroku postgres:// → postgresql://
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./content.db").replace(
+        "postgres://", "postgresql://", 1
+    )
     
     # Authentication
     SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
@@ -22,6 +24,12 @@ class Settings:
     
     # OpenAI
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+
+    # Groq
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+
+    # MongoDB — optional, used for RAG document metadata
+    MONGODB_URL: str = os.getenv("MONGODB_URL", "")
 
     # RAG / Vector Stores
     PINECONE_API_KEY: str = os.getenv("PINECONE_API_KEY", "")

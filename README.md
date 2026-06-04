@@ -1,59 +1,80 @@
-# AI-Driven Content Intelligence Engine
+# Content Intelligence Engine
 
-AI-powered content generation platform with analytics, experiments, automation workflows, and a production-oriented FastAPI RAG backend.
+AI-powered content platform with a production RAG backend supporting 3 interchangeable vector stores, MongoDB document metadata, async FastAPI serving, and a React dashboard for content generation, A/B experiments, and analytics.
 
-## Tech Stack
+**[Live Demo](https://your-app.vercel.app) · [API Docs](https://your-backend.onrender.com/docs)**
 
-- Frontend: React, Vite, Tailwind CSS, Recharts
-- Backend: FastAPI (async), SQLAlchemy, JWT auth, LangChain LCEL, LangGraph
-- Retrieval: FAISS, Pinecone, Chroma (provider-based architecture)
-- Database: SQLite (local), PostgreSQL (production)
+---
 
-## Project Structure
+## What it does
 
-- `frontend/` React app
-- `backend/` FastAPI API
-- `backend/app/api/v1/` versioned API routers
-- `backend/app/services/rag/` chunking, embeddings, retrieval, graph workflow
-- `backend/app/services/llm/` LCEL generation pipelines + parsers
-- `backend/app/utils/` shared observability and caching utilities
-- `ai_engine/` generation + prompt/classification utilities
-- `analytics/` analytics utilities and SQL helpers
-- `database/` models and seed scripts
-- `docs/` architecture and API docs
+| Layer | What's built |
+|---|---|
+| **Content generation** | Groq (Llama 3.3 70B) generates blog posts, emails, case studies, social posts via structured prompt templates |
+| **RAG pipeline** | Documents ingested → chunked → embedded → stored across FAISS + Pinecone + Chroma simultaneously. Queries run concurrently across all providers, results merged and score-normalised |
+| **MongoDB metadata store** | Document metadata (title, source, chunk count) stored in MongoDB alongside vector indices for hybrid structured/unstructured retrieval |
+| **A/B experiments** | Full experiment lifecycle: create hypothesis → set traffic split → track impressions/conversions via `POST /experiments/{id}/track` → live metrics |
+| **Analytics** | Engagement, CTR, AI accuracy metrics pulled from PostgreSQL with per-category breakdown |
+| **Automation** | Event-driven and scheduled workflow definitions with pause/resume |
 
-## Production RAG Upgrade
+---
 
-The backend now includes a modular production-style RAG pipeline:
+## Tech stack
 
-- Explicit chunking with configurable `chunk_size` and `chunk_overlap`
-- Embedding pipeline with cache support and offline-safe fallback embeddings
-- Multi-vector retrieval over FAISS/Pinecone/Chroma via provider abstractions
-- LangChain LCEL response generation with strict Pydantic output validation
-- LangGraph orchestration with nodes, conditional routing, retries, and rollback state
-- Async API execution for ingestion and query routes
-- Structured JSON logging + stage latency tracing + request latency headers
+- **Backend:** Python 3.12, FastAPI (async), SQLAlchemy, JWT auth
+- **AI/RAG:** LangChain LCEL, LangGraph orchestration, OpenAI embeddings
+- **Vector stores:** FAISS (IndexIDMap + cosine), Pinecone, Chroma — provider-swappable via shared interface
+- **Metadata store:** MongoDB via Motor (async) alongside vector indices
+- **LLM:** Groq API (Llama 3.3 70B) for content generation
+- **Database:** SQLite (dev) / PostgreSQL (production)
+- **Frontend:** React 19, Vite, Tailwind CSS v4, Recharts
 
-### New API Endpoints
+---
 
-- `POST /api/v1/rag/ingest`
-- `POST /api/v1/rag/query`
+## RAG architecture
 
-## Local Setup
+```
+POST /api/v1/rag/ingest
+  └─ DocumentChunker (configurable chunk_size + overlap)
+  └─ LangChainEmbeddingService (cached, offline-safe fallback)
+  └─ MultiStoreRetriever.upsert_all()
+       ├─ FaissProvider    → IndexIDMap(IndexFlatIP) — cosine similarity
+       ├─ PineconeProvider → real index when API key present, in-memory fallback otherwise
+       └─ ChromaProvider   → local chromadb, hnsw:space=cosine
+  └─ MongoDocumentStore.store() — metadata alongside vectors
 
-### 1) Backend
+POST /api/v1/rag/query
+  └─ RAGGraphWorkflow (LangGraph)
+       ├─ embed_query node
+       ├─ retrieve node  → concurrent across selected providers, deduped + normalised
+       ├─ generate node  → LangChain LCEL chain → Pydantic-validated JSON output
+       └─ fallback node  → degraded mode if generation fails
+  └─ MongoDB metadata enrichment on retrieval hits
+  └─ Stage-level latency telemetry (chunking / embedding / retrieval / generation)
+```
+
+**Benchmark:** `GET /api/v1/rag/benchmark` measures retrieval latency per provider independently.
+
+---
+
+## Setup
+
+### Backend
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\activate
+.\.venv\Scripts\Activate.ps1
 pip install -r backend/requirements.txt
 cd backend
 uvicorn app.main:app --reload
 ```
 
-Backend runs on `http://localhost:8000`
+Seed sample data:
+```powershell
+python -m app.seed
+```
 
-### 2) Frontend
+### Frontend
 
 ```powershell
 cd frontend
@@ -61,82 +82,86 @@ npm install
 npm run dev
 ```
 
-Frontend runs on `http://localhost:5173`
-
-## Environment Variables
-
-### Backend (`backend/.env`)
+### Environment variables (`backend/.env`)
 
 ```env
+# Required
+GROQ_API_KEY=gsk_...
+
+# Database (SQLite default, PostgreSQL for production)
 DATABASE_URL=sqlite:///./content.db
-SECRET_KEY=change-this-in-production
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-OPENAI_API_KEY=
-PINECONE_API_KEY=
+
+# Optional — RAG vector backends
+OPENAI_API_KEY=sk-...          # for real embeddings (pseudo-embeddings used otherwise)
+PINECONE_API_KEY=...
 PINECONE_INDEX_NAME=content-intelligence
 CHROMA_COLLECTION_NAME=content-intelligence
-RAG_DEFAULT_TOP_K=5
-RAG_MAX_RETRIES=2
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
-ENVIRONMENT=development
-LOG_LEVEL=INFO
+
+# Optional — MongoDB metadata store
+MONGODB_URL=mongodb+srv://...
+
+# Auth + server
+SECRET_KEY=change-this
+CORS_ORIGINS=http://localhost:5173
 ```
 
-### Frontend (`frontend/.env`)
+---
 
-```env
-VITE_API_URL=http://localhost:8000
-```
+## API reference
 
-## Main API Routes
+### Content
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/generate-content` | Generate content via Groq LLM |
+| `GET` | `/content-library` | List all generated content |
+| `GET` | `/content/{id}` | Get single content item |
 
-- `POST /auth/login`
-- `POST /auth/token`
-- `GET /auth/verify`
-- `POST /generate-content`
-- `GET /content-library`
-- `GET /analytics`
-- `GET /health`
-- `POST /api/v1/rag/ingest`
-- `POST /api/v1/rag/query`
+### RAG
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/rag/ingest` | Ingest documents into all vector stores + MongoDB |
+| `POST` | `/api/v1/rag/query` | Query with retrieval + generation |
+| `GET` | `/api/v1/rag/benchmark` | Latency benchmark across all providers |
+| `GET` | `/api/v1/rag/mongo/status` | MongoDB connection + document count |
+| `GET` | `/api/v1/rag/mongo/documents` | List documents in MongoDB |
 
-## Async and Performance Notes
+### Experiments
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/experiments` | List all experiments with live metrics |
+| `POST` | `/experiments` | Create experiment |
+| `PATCH` | `/experiments/{id}/status` | Launch / Pause / Complete |
+| `POST` | `/experiments/{id}/track` | Record impression or conversion event |
 
-- Async helps most in network-bound and I/O-bound steps: multi-provider retrieval, LLM calls, and concurrent ingestion pipelines.
-- Async is less helpful for pure CPU-heavy operations unless they are moved to worker pools or separate compute services.
-- Existing synchronous DB calls in legacy endpoints are wrapped with threadpool offloading where updated.
+### Analytics + Auth
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/analytics` | Engagement, CTR, AI accuracy, category breakdown |
+| `POST` | `/auth/login` | Get JWT token |
+| `GET` | `/health` | Health check |
 
-## Observability and Debugging
+---
 
-- Request-level tracing middleware emits structured JSON logs.
-- Stage-level latency tracking captures retrieval/generation workflow timings.
-- Failure points are logged at API, retrieval, and generation boundaries.
-- `X-Request-Latency-Ms` header is returned for API performance diagnostics.
-
-## Testing
-
-Run the focused backend tests for the production RAG upgrade:
+## Tests
 
 ```powershell
 cd backend
-..\.venv\Scripts\python.exe -m pytest tests/test_retrieval.py tests/test_pipeline.py tests/test_rag_api.py -q
+..\.venv\Scripts\python.exe -m pytest tests/ -v
 ```
+
+Key test coverage:
+- `test_retrieval.py` — verifies ranking order across all 3 providers
+- `test_pipeline.py` — end-to-end ingest → query with latency assertions
+- `test_rag_api.py` — HTTP-level API tests
+
+---
 
 ## Deployment
 
-- Quick path: `QUICK_DEPLOY.md`
-- Full guide: `DEPLOYMENT.md`
-- Supported targets: Render/Railway/Fly.io (backend), Vercel (frontend), Supabase/Neon (database)
+**Frontend → Vercel**
+- Root dir: `frontend`, build: `npm run build`, output: `dist`
+- Env var: `VITE_API_URL=https://your-backend.onrender.com`
 
-## Useful Scripts
-
-- `scripts/deploy.ps1` (Windows)
-- `scripts/deploy.sh` (Linux/macOS)
-
-## Notes
-
-- Authentication uses JWT.
-- Password hashing is configured via passlib.
-- CORS and other runtime settings are centralized in `backend/app/core/config.py`.
-- RAG pipeline modules are organized for extension and provider swap without API changes.
+**Backend + DB → Render**
+- `render.yaml` included — deploys web service + PostgreSQL automatically
+- Set `GROQ_API_KEY` and `CORS_ORIGINS` in Render environment dashboard

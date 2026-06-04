@@ -11,26 +11,23 @@ services:
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: ai-content-db
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
-      - key: OPENAI_API_KEY
+      - key: GROQ_API_KEY
         sync: false
-      - key: PINECONE_API_KEY
-        sync: false
-      - key: PINECONE_INDEX_NAME
-        value: content-intelligence
-      - key: CHROMA_COLLECTION_NAME
-        value: content-intelligence
-      - key: RAG_DEFAULT_TOP_K
-        value: "5"
-      - key: RAG_MAX_RETRIES
-        value: "2"
       - key: CORS_ORIGINS
-        value: https://your-frontend-url.vercel.app
+        sync: false
       - key: LOG_LEVEL
-        value: INFO
+        value: info
       - key: ENVIRONMENT
         value: production
       - key: PYTHON_VERSION
         value: 3.12.0
+
+databases:
+  - name: ai-content-db
+    databaseName: ai_content
+    plan: free
