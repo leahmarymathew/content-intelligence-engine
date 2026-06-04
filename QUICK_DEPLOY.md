@@ -1,87 +1,86 @@
 # Quick Deploy Guide
 
-## Fastest Way to Deploy (Free Tier)
+Deploy the full stack for free in ~20 minutes using Render (backend + PostgreSQL) and Vercel (frontend).
 
-### 1. Prepare Your Code
+---
 
-```powershell
-# Run the deployment setup script
-.\scripts\deploy.ps1
-```
-
-### 2. Push to GitHub
+## 1. Push to GitHub
 
 ```bash
 git add .
-git commit -m "Ready for deployment"
+git commit -m "chore: ready for deployment"
 git push origin main
 ```
 
-### 3. Deploy Backend to Render
+---
 
-1. Go to https://render.com
-2. Sign up with GitHub
-3. Click "New +" → "Web Service"
-4. Connect your repository
-5. Configure:
-   - **Name:** `ai-content-engine-api`
-   - **Environment:** `Python 3`
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-6. Add Environment Variables:
-   - `SECRET_KEY`: Generate at https://generate-secret.vercel.app/32
-   - `DATABASE_URL`: Get from Supabase (step 4)
-   - `OPENAI_API_KEY`: From OpenAI dashboard
-7. Click "Create Web Service"
-8. Note your backend URL: `https://ai-content-engine-api.onrender.com`
+## 2. Deploy backend + database on Render
 
-### 4. Setup Database on Supabase
+The project includes a `render.yaml` that auto-configures everything.
 
-1. Go to https://supabase.com
-2. Create new project
-3. Go to Settings → Database
-4. Copy connection string (transaction pooler)
-5. Paste into Render environment variable `DATABASE_URL`
+1. Go to **render.com** → sign up with GitHub
+2. Click **New** → **Blueprint** → connect your repo
+3. Render reads `render.yaml` and creates:
+   - A Python web service (`ai-content-intelligence-backend`)
+   - A free PostgreSQL database (`ai-content-db`)
+4. Once deployed, go to your web service → **Environment** and add:
+   - `GROQ_API_KEY` → your key from **console.groq.com** (free)
+   - `CORS_ORIGINS` → your Vercel frontend URL (set after step 3)
 
-### 5. Deploy Frontend to Vercel
+Your backend URL: `https://ai-content-intelligence-backend.onrender.com`
 
-1. Go to https://vercel.com
-2. Sign up with GitHub
-3. Click "Add New..." → "Project"
-4. Import your repository
-5. Configure:
-   - **Framework:** Vite
+---
+
+## 3. Deploy frontend on Vercel
+
+1. Go to **vercel.com** → sign up with GitHub
+2. Click **Add New Project** → import your repo
+3. Set build settings:
    - **Root Directory:** `frontend`
+   - **Framework:** Vite
    - **Build Command:** `npm run build`
    - **Output Directory:** `dist`
-6. Add Environment Variable:
-   - `VITE_API_URL`: Your Render backend URL
-7. Click "Deploy"
-8. Note your frontend URL: `https://your-app.vercel.app`
+4. Add environment variable:
+   - `VITE_API_URL` → your Render backend URL from step 2
 
-### 6. Update CORS
-
-1. Go back to Render
-2. Add environment variable:
-   - `CORS_ORIGINS`: Your Vercel frontend URL
-3. Click "Manual Deploy" → "Deploy latest commit"
-
-### 7. Test Your Deployment
-
-Visit your Vercel URL and test the application!
+Your frontend URL: `https://your-app.vercel.app`
 
 ---
 
-## Total Time: ~30 minutes
-## Total Cost: $0 (free tiers)
+## 4. Connect frontend ↔ backend
+
+Go back to **Render** → your web service → **Environment** → update `CORS_ORIGINS`:
+
+```
+https://your-app.vercel.app
+```
+
+Render redeploys automatically on save.
 
 ---
 
-## Next Steps
+## 5. Seed the database
 
-- Set up custom domain (optional)
-- Configure monitoring
-- Set up CI/CD
-- Add SSL certificates (automatic on Vercel/Render)
+Run once after the backend is live, using the external database URL from Render dashboard:
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed documentation.
+```powershell
+$env:DATABASE_URL = "postgresql://..."   # Render → database → External URL
+cd backend
+../.venv/Scripts/python.exe -m app.seed
+```
+
+---
+
+## Cost
+
+| Service | Free tier |
+|---|---|
+| Vercel (frontend) | 100 GB/month, unlimited deploys |
+| Render (backend) | Spins down after 15 min idle — first request ~30s cold start |
+| Render PostgreSQL | 1 GB, expires after 90 days |
+
+Upgrade backend to Render Starter ($7/month) to eliminate cold starts.
+
+---
+
+See [README.md](README.md) for full API reference and architecture details.
