@@ -8,6 +8,7 @@ class ContentResponse(BaseModel):
     title: str
     summary: str
     content: str
+    category: Optional[str] = None
     metadata: Dict[str, Any]
 
 
@@ -16,3 +17,4 @@ class ContentRequest(BaseModel):
     topic: str
     audience: str
     tone: str
+    contentType: Optional[str] = None

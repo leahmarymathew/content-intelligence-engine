@@ -21,17 +21,16 @@ def save_content(db: Session, data: dict, category: str) -> ContentResponse:
     db.commit()
     db.refresh(item)
 
-    # Return as ContentResponse
     return ContentResponse(
         id=item.id,
         title=item.title,
         summary=item.summary,
         content=item.content,
+        category=item.category,
         metadata={
             "topic": item.topic,
             "audience": item.audience,
             "tone": item.tone,
-            "category": item.category,
-            "created_at": str(item.created_at)
+            "created_at": str(item.created_at),
         }
     )
