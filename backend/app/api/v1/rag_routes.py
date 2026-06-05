@@ -8,7 +8,15 @@ from app.utils.observability import get_logger, log_event
 
 router  = APIRouter(prefix="/api/v1/rag", tags=["rag"])
 logger  = get_logger(__name__)
-service = RAGPipelineService()
+
+_service: RAGPipelineService | None = None
+
+
+def _get_service() -> RAGPipelineService:
+    global _service
+    if _service is None:
+        _service = RAGPipelineService()
+    return _service
 
 
 @router.post("/ingest")
@@ -18,7 +26,7 @@ async def ingest_documents(request: IngestRequest) -> dict:
     and store document metadata in MongoDB.
     """
     try:
-        result = await service.ingest(request)
+        result = await _get_service().ingest(request)
         log_event(logger, "rag_ingest_completed",
                   documents=result["documents"],
                   chunks=result["chunks"],
@@ -36,7 +44,7 @@ async def query_documents(request: RAGQueryRequest) -> RAGQueryResponse:
     Results are enriched with MongoDB document metadata where available.
     """
     try:
-        response = await service.query(request.query, request.top_k, request.use_providers)
+        response = await _get_service().query(request.query, request.top_k, request.use_providers)
         log_event(logger, "rag_query_completed",
                   top_k=request.top_k,
                   providers=request.use_providers,
@@ -61,7 +69,7 @@ async def benchmark_retrieval(
     Returns per-provider latency, hit count, and sub-200ms pass/fail.
     """
     try:
-        return await service.benchmark(query, top_k)
+        return await _get_service().benchmark(query, top_k)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -69,10 +77,10 @@ async def benchmark_retrieval(
 @router.get("/mongo/status")
 async def mongo_status() -> dict:
     """Check MongoDB connection status and document count."""
-    return await service._mongo.health_check()
+    return await _get_service()._mongo.health_check()
 
 
 @router.get("/mongo/documents")
 async def list_mongo_documents() -> list[dict]:
     """List all documents stored in MongoDB (metadata only, no vectors)."""
-    return await service._mongo.list_all()
+    return await _get_service()._mongo.list_all()

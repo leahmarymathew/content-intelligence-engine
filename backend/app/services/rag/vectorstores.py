@@ -146,13 +146,19 @@ class PineconeProvider(VectorStoreProvider, InMemoryVectorMixin):
         super().__init__()
         self._real_index = None
         self._index_name = index_name
+        self._api_key = api_key
+        self._connected = False
 
-        if api_key and index_name and PineconeClient:
+    def _ensure_connected(self) -> None:
+        if self._connected:
+            return
+        self._connected = True
+        if self._api_key and self._index_name and PineconeClient:
             try:
-                pc = PineconeClient(api_key=api_key)
+                pc = PineconeClient(api_key=self._api_key)
                 existing = [idx.name for idx in pc.list_indexes()]
-                if index_name in existing:
-                    self._real_index = pc.Index(index_name)
+                if self._index_name in existing:
+                    self._real_index = pc.Index(self._index_name)
             except Exception:
                 pass
 
@@ -161,6 +167,7 @@ class PineconeProvider(VectorStoreProvider, InMemoryVectorMixin):
 
     async def upsert(self, chunks: list[DocumentChunk]) -> None:
         await self._upsert_memory(chunks)
+        self._ensure_connected()
         if not self._real_index or not chunks:
             return
 
@@ -179,6 +186,7 @@ class PineconeProvider(VectorStoreProvider, InMemoryVectorMixin):
             pass
 
     async def search(self, query_embedding: list[float], top_k: int) -> list[RetrievalHit]:
+        self._ensure_connected()
         if not self._real_index:
             return await self._search_memory(self.name, query_embedding, top_k)
 
